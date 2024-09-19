@@ -48,8 +48,8 @@ jobs:
           </settings>
           EOF
 
-      - name: Build the project
-        run: mvn -B -DskipTests package -s ./settings.xml
+      - name: Package war file
+        run: mvn -B -DskipTests package --file ./pom.xml -s ./settings.xml
 
       - name: Log in to Azure CLI
         env:
@@ -80,15 +80,16 @@ jobs:
     runs-on: "${{ inputs.runner }}"
     needs: build
     steps:
-      - name: Deploy to VM via SSH
-        if: ${{ inputs.environment == 'dev' }}
-        uses: appleboy/ssh-action@v0.1.4
+      - name: Deploy java app
+        uses: ./.github/workflows/actions/deploy-ssh-blob-vm
         with:
-          host: ${{ secrets.AZURE_VM_IP_DEV }}
-          username: ${{ vars.AZURE_VM_USER }}
-          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY_DEV }}
-          script: |
-            sudo systemctl stop springboot-app
-            sudo rm -rf /var/www/springboot-app/*.war
-            sudo wget https://${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }}/app.war -O /var/www/springboot-app/app.war
-            sudo systemctl start springboot-app
+          environment: "${{ inputs.environment }}"
+          storage-account: "${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }}"
+          storage-container: "${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }}"
+          storage-access-key: "${{ secrets.AZURE_COMMON_STORAGE_ACCESS_KEY }}"
+          ssh-private-key: "${{ secrets.AZURE_VM_SSH_PRIVATE_KEY_DEV }}"
+          vm-prefix: "${{ vars.AZURE_VM_PREFIX }}"
+          vm-suffix: "vm"
+          vm-ip: "${{ secrets.AZURE_VM_IP_DEV }}"
+          vm-user: "${{ vars.AZURE_VM_USER }}"
+          app-name: "${{ vars.APP_NAME }}"
