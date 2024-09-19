@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ktds.mvp.springboot.employee.repository.EmployeeMapper">
+
+    <sql id="columns">
+        ID
+        , NAME
+        , EMAIL
+        , BLOOD_TYPE
+        , GENDER
+        , IP_ADDRESS
+        , PHONE
+        , COMPANY_NAME
+        , JOB_TITLE
+        , UNIVERSITY
+        , SSN
+    </sql>
+
+    <sql id="search">
+        <if test="@com.ktds.mvp.springboot.util.CustomUtil@isNotEmpty(name)">
+            AND NAME ILIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="@com.ktds.mvp.springboot.util.CustomUtil@isNotEmpty(email)">
+            AND EMAIL ILIKE CONCAT('%', #{email}, '%')
+        </if>
+    </sql>
+
+    <select id="findById" resultType="com.ktds.mvp.springboot.employee.domain.Employee">
+        SELECT
+            *
+        FROM (
+            SELECT
+                <include refid="columns" />
+            FROM
+                EMPLOYEE
+        ) l
+        WHERE
+            1=1
+            <if test="@com.ktds.mvp.springboot.util.CustomUtil@isNotEmpty(id)">
+                AND ID = #{id}
+            </if>
+        ORDER BY
+            ID
+    </select>
+
+    <select id="findBySearch" parameterType="com.ktds.mvp.springboot.employee.domain.EmployeeSearch" resultType="com.ktds.mvp.springboot.employee.domain.Employee">
+        SELECT 
+            *
+        FROM (
+            SELECT
+                <include refid="columns" />
+            FROM
+                EMPLOYEE
+        ) l
+        WHERE
+            1=1
+            <include refid="search" />
+        ORDER BY
+            ID
+    </select>
+
+    <select id="findByChartGender" parameterType="hashmap" resultType="hashmap">
+        SELECT 
+            GENDER AS "name"
+            , COUNT(*) AS "data"
+        FROM (
+            SELECT
+                <include refid="columns" />
+            FROM
+                EMPLOYEE
+        ) l
+        WHERE
+            1=1
+            <include refid="search" />
+        GROUP BY
+            GENDER
+        ORDER BY
+            "data" DESC
+    </select>
+
+    <select id="findByChartBloodType" parameterType="hashmap" resultType="hashmap">
+        SELECT 
+            BLOOD_TYPE AS "name"
+            , COUNT(*) AS "data"
+        FROM (
+            SELECT
+                <include refid="columns" />
+            FROM
+                EMPLOYEE
+        ) l
+        WHERE
+            1=1
+            <include refid="search" />
+        GROUP BY
+            BLOOD_TYPE
+        ORDER BY
+            BLOOD_TYPE
+    </select>
+
+    <select id="findByChartColumnLine" parameterType="hashmap" resultType="hashmap">
+        SELECT 
+            DUMMY.GENDER
+            , DUMMY.BLOOD_TYPE
+            , NVL(ORIGIN.DATA, 0) AS DATA
+            , AVG(NVL(ORIGIN.DATA, 0)) OVER (PARTITION BY DUMMY.GENDER) AS AVG_DATA
+        FROM (
+            SELECT GENDER, BLOOD_TYPE, COUNT(*) AS DATA
+            FROM (
+                SELECT
+                    <include refid="columns" />
+                FROM
+                    EMPLOYEE
+            )
+            WHERE 
+                1=1
+                <include refid="search" />
+            GROUP BY 
+                GENDER
+                , BLOOD_TYPE
+        ) ORIGIN
+        RIGHT OUTER JOIN (
+            SELECT *
+            FROM (
+                SELECT DISTINCT GENDER FROM EMPLOYEE
+            ) A
+            JOIN (
+                SELECT DISTINCT BLOOD_TYPE FROM EMPLOYEE
+            ) B
+        ) DUMMY
+        ON ORIGIN.GENDER = DUMMY.GENDER
+        AND ORIGIN.BLOOD_TYPE = DUMMY.BLOOD_TYPE
+    </select>
+
+</mapper>
