@@ -82,7 +82,7 @@ jobs:
     needs: build
     steps:
       - name: Deploy java app
-        uses: ./.github/workflows/actions/deploy-ssh-blob-vm
+        uses: ./.github/actions/deploy-ssh-blob-vm
         with:
           environment: "${{ inputs.environment }}"
           storage-account: "${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }}"
