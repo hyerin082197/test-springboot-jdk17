@@ -81,6 +81,9 @@ jobs:
     runs-on: "${{ inputs.runner }}"
     needs: build
     steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+      
       - name: Deploy java app
         uses: ./.github/actions/deploy-ssh-blob-vm
         with:
