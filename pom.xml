@@ -89,10 +89,15 @@
 
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.11.0</version>
+                        <configuration>
+                            <source>17</source> <!-- 소스 코드의 Java 버전 -->
+                            <target>17</target> <!-- 타겟 Java 버전 -->
+                        </configuration>
+                     </plugin>
 		</plugins>
 	</build>
 
