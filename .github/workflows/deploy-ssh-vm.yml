@@ -3,6 +3,12 @@ name: Deploy Spring Boot App to VM
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - arc-runner-axccoe-dev
+          - ubuntu-latest
       environment:
         description: "Deployment environment"
         required: true
@@ -13,17 +19,15 @@ on:
           - prd
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+  build:
+    name: Build using Maven for ${{ inputs.environment }}
+    runs-on: "${{ inputs.runner }}"
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          fetch-depth: 1
 
       - name: Configure Maven settings.xml
         run: |
@@ -39,22 +43,38 @@ jobs:
           </settings>
           EOF
 
-      - name: Build Spring Boot app
-        run: mvn -s settings.xml clean package
+      - name: Build the project
+        run: mvn -B -DskipTests package -s ./settings.xml
 
       - name: Log in to Azure CLI
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_COMMON }}
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COMMON }}
+        run: |
+          echo "$AZURE_CREDENTIALS" > azure_credentials.json
+          az login \
+            --service-principal \
+            --username $(jq -r .clientId azure_credentials.json) \
+            --password $(jq -r .clientSecret azure_credentials.json) \
+            --tenant $(jq -r .tenantId azure_credentials.json)
+          az account set --subscription $(jq -r .subscriptionId azure_credentials.json)
+        shell: bash
 
-      - name: Upload WAR file to Blob Storage
+      - name: Upload the WAR file to Blob Storage
         run: |
           az storage blob upload \
             --account-name ${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }} \
             --container-name ${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }} \
-            --file target/*.war \
-            --name ${{ vars.APP_NAME }}.war
+            --file ./target/*.war \
+            --name ${{ vars.APP_NAME }}.war \
+            --overwrite \
+            --auth-mode login
+        shell: bash
 
+  deploy:
+    name: Deploy to VM for ${{ inputs.environment }}
+    runs-on: "${{ inputs.runner }}"
+    needs: build
+    steps:
       - name: Deploy to VM via SSH
         if: ${{ inputs.environment == 'dev' }}
         uses: appleboy/ssh-action@v0.1.4
@@ -65,5 +85,5 @@ jobs:
           script: |
             sudo systemctl stop springboot-app
             sudo rm -rf /var/www/springboot-app/*.war
-            sudo wget https://<blob-url>/${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }}/app.war -O /var/www/springboot-app/app.war
+            sudo wget https://${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }}/app.war -O /var/www/springboot-app/app.war
             sudo systemctl start springboot-app
