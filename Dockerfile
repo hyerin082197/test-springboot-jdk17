@@ -7,7 +7,6 @@ COPY pom.xml .
 RUN mvn dependency:go-offline
 
 COPY src ./src
-# 여기에서 war 파일을 생성하도록 변경합니다.
 RUN mvn package -DskipTests -Pwar
 RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.war)
 
