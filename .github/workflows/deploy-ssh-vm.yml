@@ -28,7 +28,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up JDK 17 # JDK 17 설정 단계 추가
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -48,8 +49,9 @@ jobs:
           </settings>
           EOF
 
+      # 여기서 .war 파일을 생성하도록 수정합니다.
       - name: Package war file
-        run: mvn -B -DskipTests package --file ./pom.xml -s ./settings.xml
+        run: mvn -B -DskipTests package -Pwar --file ./pom.xml -s ./settings.xml
 
       - name: Log in to Azure CLI
         env:
@@ -64,6 +66,7 @@ jobs:
           az account set --subscription $(jq -r .subscriptionId azure_credentials.json)
         shell: bash
 
+      # Blob Storage에 .war 파일을 업로드합니다.
       - name: Upload the WAR file to Blob Storage
         run: |
           az storage blob upload \
