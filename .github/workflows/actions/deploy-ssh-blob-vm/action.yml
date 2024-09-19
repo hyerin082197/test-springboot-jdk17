@@ -1,0 +1,56 @@
+name: Deploy Java App
+description: Deploy Java Application to VM using ssh and blob
+inputs:
+  environment:
+    required: true
+    default: ""
+  storage-account:
+    required: true
+    default: ""
+  storage-container:
+    required: true
+    default: ""
+  storage-access-key:
+    required: true
+    default: ""
+  ssh-private-key:
+    required: true
+    default: ""
+  vm-prefix:
+    required: true
+    default: ""
+  vm-suffix:
+    required: true
+    default: ""
+  vm-ip:
+    required: true
+    default: ""
+  vm-user:
+    required: true
+    default: ""
+  app-name:
+    required: true
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up ssh private key
+      run: |
+        mkdir -p ~/.ssh/
+        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/${{ inputs.vm-prefix }}-${{ inputs.environment }}-${{ inputs.vm-suffix }}.pem
+        chmod 600 ~/.ssh/${{ inputs.vm-prefix }}-${{ inputs.environment }}-${{ inputs.vm-suffix }}.pem
+      shell: bash
+
+    - name: Run java application
+      run: |  
+        ssh -i ~/.ssh/${{ inputs.vm-prefix }}-${{ inputs.environment }}-${{ inputs.vm-suffix }}.pem -o StrictHostKeyChecking=no ${{ inputs.vm-user }}@${{ inputs.vm-ip }} << 'EOF'
+          set -e
+          az storage blob download \
+            --account-name ${{ inputs.storage-account }} \
+            --container-name ${{ inputs.storage-container }} \
+            --file ./deploy-jar.sh --name deploy-jar.sh --auth-mode key --account-key ${{ inputs.storage-access-key }}
+          chmod 755 ./deploy-jar.sh
+          ./deploy-jar.sh ${{ inputs.app-name }} ${{ inputs.vm-user }} ${{ inputs.environment }} ${{ inputs.storage-account }} ${{ inputs.storage-container }} ${{ inputs.storage-access-key }}
+        EOF
+      shell: bash
