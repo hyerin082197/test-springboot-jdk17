@@ -69,7 +69,7 @@ jobs:
           az storage blob upload \
             --account-name ${{ vars.AZURE_COMMON_STORAGE_ACCOUNT }} \
             --container-name ${{ vars.AZURE_COMMON_ARTIFACT_CONTAINER }} \
-            --file ./target/*.war \
+            --file ./target/mvp-springboot-jdk17-0.0.1-SNAPSHOT.war \
             --name ${{ vars.APP_NAME }}.war \
             --overwrite \
             --auth-mode login
