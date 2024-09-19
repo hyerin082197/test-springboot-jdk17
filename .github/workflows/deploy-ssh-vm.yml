@@ -48,7 +48,6 @@ jobs:
             </servers>
           </settings>
           EOF
-
       - name: Package war file
         run: mvn -B -DskipTests package -Pwar --file ./pom.xml -s ./settings.xml
 
